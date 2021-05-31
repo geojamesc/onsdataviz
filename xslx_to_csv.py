@@ -352,11 +352,13 @@ def filter_empty_industry_bands(out_path):
                 zero_cell_count = 0
                 for k in r:
                     if k not in ('wave', 'industry_band'):
+                        # TODO actually we only care about null values
                         if r[k] == '':
                             null_cell_count += 1
                         if r[k] == '0.0':
                             zero_cell_count += 1
 
+                # TODO but actually is it not only nulls that are problematic?
                 # there are 10 metrics, so have all 10 are null or zero we can`t
                 # do anything with the data
                 if (null_cell_count + zero_cell_count) == 10:
@@ -369,7 +371,8 @@ def filter_empty_industry_bands(out_path):
             print('Counts of waves per industry_band where all metrics are null/zero')
             print('Re-writing merged_records_w_all_metrics.csv as merged_records_w_all_metrics_filtered.csv without these')
             for k in sorted(count_of_empty_records_per_industry_band.keys()):
-                print('{} : {}'.format(k, count_of_empty_records_per_industry_band[k]))
+                print('\t{} : {}'.format(k, count_of_empty_records_per_industry_band[k]))
+            print('\n')
 
             # then we read in merged_records_w_all_metrics.csv and create a new output csv
             # merged_records_w_all_metrics_filtered.csv in which we have excluded industry_bands
@@ -384,6 +387,60 @@ def filter_empty_industry_bands(out_path):
                             my_writer.writerow(r)
 
 
+def validate_filtered_metrics(out_path):
+    """
+    for each of the 10 metrics obtain count of the number of records
+    where the metric value is null or equal to zero
+
+    ts_current_and_started_trading 0
+    ts_paused_trading 87
+    ts_ceased_trading 200
+    cf_lt_3mths 0
+    fp_lower_turnover 15
+    fp_turnover_not_affected 18
+    fp_higher_turnover 26
+    ws_working_normal_place_of_work 0
+    ws_wfh 0
+    ws_on_furlough 0
+
+    i.e. for ws_wfh metric all records have a value other than 0
+    whereas for ts_paused_trading 87 records have a value which is 0 or null
+
+    :param out_path:
+    :return:
+    """
+    metric_values_count_null_or_zero = {
+        'ts_current_and_started_trading': 0,
+        'ts_paused_trading': 0,
+        'ts_ceased_trading': 0,
+        'cf_lt_3mths': 0,
+        'fp_lower_turnover': 0,
+        'fp_turnover_not_affected': 0,
+        'fp_higher_turnover': 0,
+        'ws_working_normal_place_of_work': 0,
+        'ws_wfh': 0,
+        'ws_on_furlough': 0
+    }
+
+    with open(os.path.join(out_path, 'merged_records_w_all_metrics_filtered.csv'), 'r') as inpf:
+        my_reader = csv.DictReader(inpf)
+        metrics = metric_values_count_null_or_zero.keys()
+        for r in my_reader:
+            for metric in metrics:
+                metric_val = r[metric]
+
+                # TODO actually we only care about NULL values
+                if metric_val in ('', '0.0'):
+                    metric_values_count_null_or_zero[metric] += 1
+
+    print('Results of validating metrics.')
+    print('Counts of records per metric where metric value is null or equal to zero.')
+    print('0 = for the metric means all records have a value')
+    print('value > 0 for the metric means some records don`t have a value or value is equal to zero')
+    for metric in metric_values_count_null_or_zero:
+        print('\t', metric, metric_values_count_null_or_zero[metric])
+
+
 def transform_data(src_fn, out_path):
     # [1] first we dump out to csv each of the 4 sheets from the xlsx
     convert_data(
@@ -395,9 +452,14 @@ def transform_data(src_fn, out_path):
     # [2] then we merge these 4 csv`s into a single csv
     write_merged_csv(out_path)
 
+    # TODO think on NULL vs zero
+
     # [3] then we filter this single csv to remove records where for industry_band a significant number of the
     # waves are all null or zero
     filter_empty_industry_bands(out_path)
+
+    # [4] then we validate metrics
+    validate_filtered_metrics(out_path)
 
 
 if __name__ == "__main__":
@@ -405,12 +467,3 @@ if __name__ == "__main__":
         src_fn='/home/james/Desktop/Work/FGreen/Supplied_Data_210521/basic data.xlsx',
         out_path='/home/james/Desktop'
     )
-
-
-
-
-
-
-
-
-
