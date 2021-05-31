@@ -323,16 +323,81 @@ def write_merged_csv(out_path):
             my_writer.writerows(out_records)
 
 
+def filter_empty_industry_bands(out_path):
+    """
+    filter off all records where industry_band is one of the following
+
+    Counts of waves per industry_band where all metrics are null/zero
+    Industry: Education : 19
+    Industry: Health and social work : 17
+    Industry: Mining and quarrying : 15
+    Industry: Other service activities : 23
+    Industry: Real estate activities : 23
+    Industry: Water supply, sewerage, waste : 23
+
+    i.e. there are 23 waves in total, for Industry: Education, in 19 of the waves all of the 10 metrics are
+    null or equal to zero so we can`t do anything across the entire dataset in the first instance
+
+    :param out_path:
+    :return:
+    """
+    if os.path.exists(os.path.join(out_path, 'merged_records_w_all_metrics.csv')):
+        count_of_empty_records_per_industry_band = {}
+
+        with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'r') as inpf:
+            my_reader = csv.DictReader(inpf)
+            for r in my_reader:
+                industry_band = r['industry_band']
+                null_cell_count = 0
+                zero_cell_count = 0
+                for k in r:
+                    if k not in ('wave', 'industry_band'):
+                        if r[k] == '':
+                            null_cell_count += 1
+                        if r[k] == '0.0':
+                            zero_cell_count += 1
+
+                # there are 10 metrics, so have all 10 are null or zero we can`t
+                # do anything with the data
+                if (null_cell_count + zero_cell_count) == 10:
+                    if industry_band not in count_of_empty_records_per_industry_band:
+                        count_of_empty_records_per_industry_band[industry_band] = 1
+                    else:
+                        count_of_empty_records_per_industry_band[industry_band] += 1
+
+        if len(count_of_empty_records_per_industry_band.keys()) > 1:
+            print('Counts of waves per industry_band where all metrics are null/zero')
+            print('Re-writing merged_records_w_all_metrics.csv as merged_records_w_all_metrics_filtered.csv without these')
+            for k in sorted(count_of_empty_records_per_industry_band.keys()):
+                print('{} : {}'.format(k, count_of_empty_records_per_industry_band[k]))
+
+            # then we read in merged_records_w_all_metrics.csv and create a new output csv
+            # merged_records_w_all_metrics_filtered.csv in which we have excluded industry_bands
+            # where in a significant number of waves the 10 columns were all null or zero
+            with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'r') as inpf:
+                my_reader = csv.reader(inpf)
+                with open(os.path.join(out_path, 'merged_records_w_all_metrics_filtered.csv'), 'w') as outpf:
+                    my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+                    for r in my_reader:
+                        industry_band = r[1]
+                        if industry_band not in count_of_empty_records_per_industry_band:
+                            my_writer.writerow(r)
+
+
 def transform_data(src_fn, out_path):
-    # first we dump out to csv each of the 4 sheets from the xlsx
+    # [1] first we dump out to csv each of the 4 sheets from the xlsx
     convert_data(
         xlsx_fn=src_fn,
         out_path=out_path,
         limit_output_columns=True
     )
 
-    # then we merge these 4 csv`s into a single csv
+    # [2] then we merge these 4 csv`s into a single csv
     write_merged_csv(out_path)
+
+    # [3] then we filter this single csv to remove records where for industry_band a significant number of the
+    # waves are all null or zero
+    filter_empty_industry_bands(out_path)
 
 
 if __name__ == "__main__":
