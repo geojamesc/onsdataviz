@@ -1,3 +1,4 @@
+import csv
 import os
 import pandas as pd
 import datetime
@@ -10,7 +11,7 @@ def create_start_date_from_data_col(in_date_str):
 
     convert the val
 
-    :param wave_date_str: a str like 19 April to 2 May 2021
+    :param in_date_str: a str like 19 April to 2 May 2021
     :return: the start date in form dd-mm-YYYY
 
     copes with the different ways things are written in the date column
@@ -66,12 +67,6 @@ def create_start_date_from_data_col(in_date_str):
         int(d_start_d)
     )
 
-    # end_date = datetime.date(
-    #     int(d_end_y),
-    #     datetime.datetime.strptime(d_end_m, "%B").month,
-    #     int(d_end_d)
-    # )
-
     return datetime.datetime.strftime(start_date, "%d-%m-%Y")
 
 
@@ -94,7 +89,7 @@ def format_industry_band(in_cell_val):
     return out_cell_val
 
 
-def convert_data(xlsx_fn, limit_output_columns=False):
+def convert_data(xlsx_fn, out_path, limit_output_columns=False):
     """
 
     :param xlsx_fn:  path to .xlsx file
@@ -154,6 +149,14 @@ def convert_data(xlsx_fn, limit_output_columns=False):
         ]
     }
 
+    # cleanup the headers written to output csvs
+    out_headers = {
+        'TradingStatus_TS': ['wave', 'date', 'wave_start_date', 'industry_band', 'ts_ceased_trading', 'ts_current_and_started_trading', 'ts_paused_trading'],
+        'FinancialPerformance_TS': ['wave', 'date', 'wave_start_date', 'industry_band', 'fp_turnover_not_affected', 'fp_lower_turnover', 'fp_higher_turnover'],
+        'WorkforceStatus_TS': ['wave', 'date', 'wave_start_date', 'industry_band', 'ws_on_furlough', 'ws_working_normal_place_of_work', 'ws_wfh'],
+        'CashFlow_TS': ['wave', 'date', 'wave_start_date', 'industry_band', 'cf_lt_3mths']
+    }
+
     if os.path.exists(xlsx_fn):
         for sheet in columns_to_reformat_by_sheet:
 
@@ -197,16 +200,152 @@ def convert_data(xlsx_fn, limit_output_columns=False):
 
             # write the dataframe out as a CSV file
             # use columns to select a subset of the columns to write out
-            out_fn = os.path.join('/home/james/Desktop', ''.join([sheet.replace('_TS', '').lower(), '.csv']))
+            out_fn = os.path.join(out_path, ''.join([sheet.replace('_TS', '').lower(), '.csv']))
+
+            out_header = True
+            if sheet in out_headers:
+                out_header = out_headers[sheet]
+
             with open(out_fn, 'w', newline='') as outpf:
                 # reindex is used so that we can change the order by which columns are written out as
                 # columns indicates which columns are to output and their order
                 # index=False means don`t include the df index column in the output
-                df.reindex(columns=columns_to_output).to_csv(outpf, columns=columns_to_output, index=False)
+                df.reindex(columns=columns_to_output).to_csv(outpf, columns=columns_to_output, index=False, header=out_header)
+
+
+def write_merged_csv(out_path):
+    """
+    take the 4 csv`s produced by convert_data and merges into a single csv containing
+    wave, industry_band and the columns from the 4 csv`s
+
+    NOTE: (start) date of waves in FinancialPerformance is inconsistent with other data
+    according to FG`s notes this is because the question refers to previous week
+    assumption is that the data can from different metrics can still be grouped by wave
+    even though in the case of FinancialPerformance this is 1 week difft
+    """
+    indv_csvs = {
+        'cf': os.path.join(out_path, 'cashflow.csv'),
+        'fp': os.path.join(out_path, 'financialperformance.csv'),
+        'ts': os.path.join(out_path, 'tradingstatus.csv'),
+        'ws': os.path.join(out_path, 'workforcestatus.csv')
+    }
+
+    merged_records = {}
+
+    for metric in indv_csvs:
+        pth_to_csv = indv_csvs[metric]
+        with open(pth_to_csv, 'r') as inpf:
+            my_reader = csv.DictReader(inpf)
+
+            for r in my_reader:
+                wave = r['wave']
+                industry_band = r['industry_band']
+                k = '__'.join([wave, industry_band])
+                if metric == 'cf':
+                    cf_lt_3mths = r['cf_lt_3mths']
+                    data_for_metric = {
+                        'cf_lt_3mths':  cf_lt_3mths
+                    }
+
+                elif metric == 'fp':
+                    fp_turnover_not_affected = r['fp_turnover_not_affected']
+                    fp_lower_turnover = r['fp_lower_turnover']
+                    fp_higher_turnover = r['fp_higher_turnover']
+                    data_for_metric = {
+                        'fp_turnover_not_affected': fp_turnover_not_affected,
+                        'fp_lower_turnover': fp_lower_turnover,
+                        'fp_higher_turnover': fp_higher_turnover
+                    }
+                elif metric == 'ts':
+                    ts_ceased_trading = r['ts_ceased_trading']
+                    ts_current_and_started_trading = r['ts_current_and_started_trading']
+                    ts_paused_trading = r['ts_paused_trading']
+                    data_for_metric = {
+                        'ts_ceased_trading': ts_ceased_trading,
+                        'ts_current_and_started_trading': ts_current_and_started_trading,
+                        'ts_paused_trading': ts_paused_trading
+                    }
+                elif metric == 'ws':
+                    ws_on_furlough = r['ws_on_furlough']
+                    ws_working_normal_place_of_work = r['ws_working_normal_place_of_work']
+                    ws_wfh = r['ws_wfh']
+                    data_for_metric = {
+                        'ws_on_furlough': ws_on_furlough,
+                        'ws_working_normal_place_of_work': ws_working_normal_place_of_work,
+                        'ws_wfh': ws_wfh
+                    }
+
+                if k in merged_records:
+                    merged_records[k][metric] = data_for_metric
+                else:
+                    merged_record = {'cf': None, 'fp': None, 'ts': None, 'ws': None}
+                    merged_record[metric] = data_for_metric
+                    merged_records[k] = merged_record
+
+    out_records = []
+
+    for k in merged_records:
+        [wave, industry_band] = k.split('__')
+        cf_lt_3mths = merged_records[k]['cf']['cf_lt_3mths']
+        fp_higher_turnover = merged_records[k]['fp']['fp_higher_turnover']
+        fp_lower_turnover = merged_records[k]['fp']['fp_lower_turnover']
+        fp_turnover_not_affected = merged_records[k]['fp']['fp_turnover_not_affected']
+        ts_ceased_trading = merged_records[k]['ts']['ts_ceased_trading']
+        ts_current_and_started_trading = merged_records[k]['ts']['ts_current_and_started_trading']
+        ts_paused_trading = merged_records[k]['ts']['ts_paused_trading']
+        ws_on_furlough = merged_records[k]['ws']['ws_on_furlough']
+        ws_wfh = merged_records[k]['ws']['ws_wfh']
+        ws_working_normal_place_of_work = merged_records[k]['ws']['ws_working_normal_place_of_work']
+
+        out_record = [
+            wave,
+            industry_band,
+            ts_current_and_started_trading,
+            ts_paused_trading,
+            ts_ceased_trading,
+            cf_lt_3mths,
+            fp_lower_turnover,
+            fp_turnover_not_affected,
+            fp_higher_turnover,
+            ws_working_normal_place_of_work,
+            ws_wfh,
+            ws_on_furlough
+        ]
+
+        out_records.append(out_record)
+
+        with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'w') as outpf:
+            my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+            header = ['wave', 'industry_band', 'ts_current_and_started_trading', 'ts_paused_trading', 'ts_ceased_trading',
+                      'cf_lt_3mths', 'fp_lower_turnover', 'fp_turnover_not_affected', 'fp_higher_turnover',
+                      'ws_working_normal_place_of_work', 'ws_wfh', 'ws_on_furlough']
+            my_writer.writerow(header)
+            my_writer.writerows(out_records)
+
+
+def transform_data(src_fn, out_path):
+    # first we dump out to csv each of the 4 sheets from the xlsx
+    convert_data(
+        xlsx_fn=src_fn,
+        out_path=out_path,
+        limit_output_columns=True
+    )
+
+    # then we merge these 4 csv`s into a single csv
+    write_merged_csv(out_path)
 
 
 if __name__ == "__main__":
-    convert_data(
-        xlsx_fn='/home/james/Desktop/Work/FGreen/Supplied_Data_210521/basic data.xlsx',
-        limit_output_columns=True
+    transform_data(
+        src_fn='/home/james/Desktop/Work/FGreen/Supplied_Data_210521/basic data.xlsx',
+        out_path='/home/james/Desktop'
     )
+
+
+
+
+
+
+
+
+
