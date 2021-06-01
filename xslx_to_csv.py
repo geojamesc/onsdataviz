@@ -4,6 +4,116 @@ import pandas as pd
 import datetime
 
 
+# def write_merged_csv(out_path):
+#     """
+#     take the 4 csv`s produced by convert_data and merges into a single csv containing
+#     wave, industry_band and the columns from the 4 csv`s
+#
+#     NOTE: (start) date of waves in FinancialPerformance is inconsistent with other data
+#     according to FG`s notes this is because the question refers to previous week
+#     assumption is that the data can from different metrics can still be grouped by wave
+#     even though in the case of FinancialPerformance this is 1 week difft
+#     """
+#     indv_csvs = {
+#         'cf': os.path.join(out_path, 'cashflow.csv'),
+#         'fp': os.path.join(out_path, 'financialperformance.csv'),
+#         'ts': os.path.join(out_path, 'tradingstatus.csv'),
+#         'ws': os.path.join(out_path, 'workforcestatus.csv')
+#     }
+#
+#     merged_records = {}
+#
+#     for metric in indv_csvs:
+#         pth_to_csv = indv_csvs[metric]
+#         with open(pth_to_csv, 'r') as inpf:
+#             my_reader = csv.DictReader(inpf)
+#
+#             for r in my_reader:
+#                 wave = r['wave']
+#                 industry_band = r['industry_band']
+#                 k = '__'.join([wave, industry_band])
+#                 if metric == 'cf':
+#                     cf_lt_3mths = r['cf_lt_3mths']
+#                     data_for_metric = {
+#                         'cf_lt_3mths':  cf_lt_3mths
+#                     }
+#
+#                 elif metric == 'fp':
+#                     fp_turnover_not_affected = r['fp_turnover_not_affected']
+#                     fp_lower_turnover = r['fp_lower_turnover']
+#                     fp_higher_turnover = r['fp_higher_turnover']
+#                     data_for_metric = {
+#                         'fp_turnover_not_affected': fp_turnover_not_affected,
+#                         'fp_lower_turnover': fp_lower_turnover,
+#                         'fp_higher_turnover': fp_higher_turnover
+#                     }
+#                 elif metric == 'ts':
+#                     ts_ceased_trading = r['ts_ceased_trading']
+#                     ts_current_and_started_trading = r['ts_current_and_started_trading']
+#                     ts_paused_trading = r['ts_paused_trading']
+#                     data_for_metric = {
+#                         'ts_ceased_trading': ts_ceased_trading,
+#                         'ts_current_and_started_trading': ts_current_and_started_trading,
+#                         'ts_paused_trading': ts_paused_trading
+#                     }
+#                 elif metric == 'ws':
+#                     ws_on_furlough = r['ws_on_furlough']
+#                     ws_working_normal_place_of_work = r['ws_working_normal_place_of_work']
+#                     ws_wfh = r['ws_wfh']
+#                     data_for_metric = {
+#                         'ws_on_furlough': ws_on_furlough,
+#                         'ws_working_normal_place_of_work': ws_working_normal_place_of_work,
+#                         'ws_wfh': ws_wfh
+#                     }
+#
+#                 if k in merged_records:
+#                     merged_records[k][metric] = data_for_metric
+#                 else:
+#                     merged_record = {'cf': None, 'fp': None, 'ts': None, 'ws': None}
+#                     merged_record[metric] = data_for_metric
+#                     merged_records[k] = merged_record
+#
+#     out_records = []
+#
+#     for k in merged_records:
+#         [wave, industry_band] = k.split('__')
+#         cf_lt_3mths = merged_records[k]['cf']['cf_lt_3mths']
+#         fp_higher_turnover = merged_records[k]['fp']['fp_higher_turnover']
+#         fp_lower_turnover = merged_records[k]['fp']['fp_lower_turnover']
+#         fp_turnover_not_affected = merged_records[k]['fp']['fp_turnover_not_affected']
+#         ts_ceased_trading = merged_records[k]['ts']['ts_ceased_trading']
+#         ts_current_and_started_trading = merged_records[k]['ts']['ts_current_and_started_trading']
+#         ts_paused_trading = merged_records[k]['ts']['ts_paused_trading']
+#         ws_on_furlough = merged_records[k]['ws']['ws_on_furlough']
+#         ws_wfh = merged_records[k]['ws']['ws_wfh']
+#         ws_working_normal_place_of_work = merged_records[k]['ws']['ws_working_normal_place_of_work']
+#
+#         out_record = [
+#             wave,
+#             industry_band,
+#             ts_current_and_started_trading,
+#             ts_paused_trading,
+#             ts_ceased_trading,
+#             cf_lt_3mths,
+#             fp_lower_turnover,
+#             fp_turnover_not_affected,
+#             fp_higher_turnover,
+#             ws_working_normal_place_of_work,
+#             ws_wfh,
+#             ws_on_furlough
+#         ]
+#
+#         out_records.append(out_record)
+#
+#         with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'w') as outpf:
+#             my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+#             header = ['wave', 'industry_band', 'ts_current_and_started_trading', 'ts_paused_trading', 'ts_ceased_trading',
+#                       'cf_lt_3mths', 'fp_lower_turnover', 'fp_turnover_not_affected', 'fp_higher_turnover',
+#                       'ws_working_normal_place_of_work', 'ws_wfh', 'ws_on_furlough']
+#             my_writer.writerow(header)
+#             my_writer.writerows(out_records)
+
+
 def create_start_date_from_data_col(in_date_str):
     """
     s_date = create_start_date_from_data_col('19 April to 2 May 2021')
@@ -89,7 +199,7 @@ def format_industry_band(in_cell_val):
     return out_cell_val
 
 
-def convert_data(xlsx_fn, out_path, limit_output_columns=False):
+def convert_data_from_xlsx_to_csv(xlsx_fn, out_path, limit_output_columns=False):
     """
 
     :param xlsx_fn:  path to .xlsx file
@@ -213,178 +323,82 @@ def convert_data(xlsx_fn, out_path, limit_output_columns=False):
                 df.reindex(columns=columns_to_output).to_csv(outpf, columns=columns_to_output, index=False, header=out_header)
 
 
-def write_merged_csv(out_path):
+def rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn, metric_count):
     """
-    take the 4 csv`s produced by convert_data and merges into a single csv containing
-    wave, industry_band and the columns from the 4 csv`s
+    takes csv generated by convert_data() and re-writes it filtering off records associated with an
+    industry_band where all records per wave of that industry_band present in the csv have null/empty
+    values. Note values of 0 are allowed and don`t count as null/empty
 
-    NOTE: (start) date of waves in FinancialPerformance is inconsistent with other data
-    according to FG`s notes this is because the question refers to previous week
-    assumption is that the data can from different metrics can still be grouped by wave
-    even though in the case of FinancialPerformance this is 1 week difft
-    """
-    indv_csvs = {
-        'cf': os.path.join(out_path, 'cashflow.csv'),
-        'fp': os.path.join(out_path, 'financialperformance.csv'),
-        'ts': os.path.join(out_path, 'tradingstatus.csv'),
-        'ws': os.path.join(out_path, 'workforcestatus.csv')
-    }
-
-    merged_records = {}
-
-    for metric in indv_csvs:
-        pth_to_csv = indv_csvs[metric]
-        with open(pth_to_csv, 'r') as inpf:
-            my_reader = csv.DictReader(inpf)
-
-            for r in my_reader:
-                wave = r['wave']
-                industry_band = r['industry_band']
-                k = '__'.join([wave, industry_band])
-                if metric == 'cf':
-                    cf_lt_3mths = r['cf_lt_3mths']
-                    data_for_metric = {
-                        'cf_lt_3mths':  cf_lt_3mths
-                    }
-
-                elif metric == 'fp':
-                    fp_turnover_not_affected = r['fp_turnover_not_affected']
-                    fp_lower_turnover = r['fp_lower_turnover']
-                    fp_higher_turnover = r['fp_higher_turnover']
-                    data_for_metric = {
-                        'fp_turnover_not_affected': fp_turnover_not_affected,
-                        'fp_lower_turnover': fp_lower_turnover,
-                        'fp_higher_turnover': fp_higher_turnover
-                    }
-                elif metric == 'ts':
-                    ts_ceased_trading = r['ts_ceased_trading']
-                    ts_current_and_started_trading = r['ts_current_and_started_trading']
-                    ts_paused_trading = r['ts_paused_trading']
-                    data_for_metric = {
-                        'ts_ceased_trading': ts_ceased_trading,
-                        'ts_current_and_started_trading': ts_current_and_started_trading,
-                        'ts_paused_trading': ts_paused_trading
-                    }
-                elif metric == 'ws':
-                    ws_on_furlough = r['ws_on_furlough']
-                    ws_working_normal_place_of_work = r['ws_working_normal_place_of_work']
-                    ws_wfh = r['ws_wfh']
-                    data_for_metric = {
-                        'ws_on_furlough': ws_on_furlough,
-                        'ws_working_normal_place_of_work': ws_working_normal_place_of_work,
-                        'ws_wfh': ws_wfh
-                    }
-
-                if k in merged_records:
-                    merged_records[k][metric] = data_for_metric
-                else:
-                    merged_record = {'cf': None, 'fp': None, 'ts': None, 'ws': None}
-                    merged_record[metric] = data_for_metric
-                    merged_records[k] = merged_record
-
-    out_records = []
-
-    for k in merged_records:
-        [wave, industry_band] = k.split('__')
-        cf_lt_3mths = merged_records[k]['cf']['cf_lt_3mths']
-        fp_higher_turnover = merged_records[k]['fp']['fp_higher_turnover']
-        fp_lower_turnover = merged_records[k]['fp']['fp_lower_turnover']
-        fp_turnover_not_affected = merged_records[k]['fp']['fp_turnover_not_affected']
-        ts_ceased_trading = merged_records[k]['ts']['ts_ceased_trading']
-        ts_current_and_started_trading = merged_records[k]['ts']['ts_current_and_started_trading']
-        ts_paused_trading = merged_records[k]['ts']['ts_paused_trading']
-        ws_on_furlough = merged_records[k]['ws']['ws_on_furlough']
-        ws_wfh = merged_records[k]['ws']['ws_wfh']
-        ws_working_normal_place_of_work = merged_records[k]['ws']['ws_working_normal_place_of_work']
-
-        out_record = [
-            wave,
-            industry_band,
-            ts_current_and_started_trading,
-            ts_paused_trading,
-            ts_ceased_trading,
-            cf_lt_3mths,
-            fp_lower_turnover,
-            fp_turnover_not_affected,
-            fp_higher_turnover,
-            ws_working_normal_place_of_work,
-            ws_wfh,
-            ws_on_furlough
-        ]
-
-        out_records.append(out_record)
-
-        with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'w') as outpf:
-            my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-            header = ['wave', 'industry_band', 'ts_current_and_started_trading', 'ts_paused_trading', 'ts_ceased_trading',
-                      'cf_lt_3mths', 'fp_lower_turnover', 'fp_turnover_not_affected', 'fp_higher_turnover',
-                      'ws_working_normal_place_of_work', 'ws_wfh', 'ws_on_furlough']
-            my_writer.writerow(header)
-            my_writer.writerows(out_records)
-
-
-def filter_empty_industry_bands(out_path):
-    """
-    filter off all records where industry_band is one of the following
-
-    Counts of waves per industry_band where all metrics are null/zero
-    Industry: Education : 19
-    Industry: Health and social work : 17
-    Industry: Mining and quarrying : 15
-    Industry: Other service activities : 23
-    Industry: Real estate activities : 23
-    Industry: Water supply, sewerage, waste : 23
-
-    i.e. there are 23 waves in total, for Industry: Education, in 19 of the waves all of the 10 metrics are
-    null or equal to zero so we can`t do anything across the entire dataset in the first instance
-
-    :param out_path:
+    :param input_csv_fn:
+    :param metric_count:
     :return:
     """
-    if os.path.exists(os.path.join(out_path, 'merged_records_w_all_metrics.csv')):
-        count_of_empty_records_per_industry_band = {}
+    waves_per_band = {}
 
-        with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'r') as inpf:
+    if os.path.exists(input_csv_fn):
+        with open(input_csv_fn, 'r') as inpf:
             my_reader = csv.DictReader(inpf)
+
             for r in my_reader:
+                record_is_empty = False
+                null_or_zero_cell_count = 0
+                wave = r['wave']
                 industry_band = r['industry_band']
-                null_cell_count = 0
-                zero_cell_count = 0
                 for k in r:
-                    if k not in ('wave', 'industry_band'):
-                        # TODO actually we only care about null values
-                        if r[k] == '':
-                            null_cell_count += 1
-                        if r[k] == '0.0':
-                            zero_cell_count += 1
+                    if k not in ('wave', 'date', 'wave_start_date', 'industry_band'):
+                        if r[k] in ('', '0.0'):
+                            null_or_zero_cell_count += 1
 
-                # TODO but actually is it not only nulls that are problematic?
-                # there are 10 metrics, so have all 10 are null or zero we can`t
-                # do anything with the data
-                if (null_cell_count + zero_cell_count) == 10:
-                    if industry_band not in count_of_empty_records_per_industry_band:
-                        count_of_empty_records_per_industry_band[industry_band] = 1
-                    else:
-                        count_of_empty_records_per_industry_band[industry_band] += 1
+                if null_or_zero_cell_count == metric_count:
+                    record_is_empty = True
 
-        if len(count_of_empty_records_per_industry_band.keys()) > 1:
-            print('Counts of waves per industry_band where all metrics are null/zero')
-            print('Re-writing merged_records_w_all_metrics.csv as merged_records_w_all_metrics_filtered.csv without these')
-            for k in sorted(count_of_empty_records_per_industry_band.keys()):
-                print('\t{} : {}'.format(k, count_of_empty_records_per_industry_band[k]))
-            print('\n')
+                if industry_band in waves_per_band:
+                    waves_per_band[industry_band]['count_waves_present_in'] += 1
+                    if record_is_empty:
+                        waves_per_band[industry_band]['count_waves_null_present_in'] += 1
+                else:
+                    waves_per_band[industry_band] = {
+                        'count_waves_present_in': 1,
+                        'count_waves_null_present_in': 0
+                    }
+                    if record_is_empty:
+                        waves_per_band[industry_band]['count_waves_null_present_in'] += 1
 
-            # then we read in merged_records_w_all_metrics.csv and create a new output csv
-            # merged_records_w_all_metrics_filtered.csv in which we have excluded industry_bands
-            # where in a significant number of waves the 10 columns were all null or zero
-            with open(os.path.join(out_path, 'merged_records_w_all_metrics.csv'), 'r') as inpf:
+        industry_bands_to_exclude = []
+
+        for industry_band in waves_per_band:
+            count_waves_null_present_in = waves_per_band[industry_band]['count_waves_null_present_in']
+            count_waves_present_in = waves_per_band[industry_band]['count_waves_present_in']
+
+            exclude = False
+
+            if count_waves_null_present_in == count_waves_present_in:
+                exclude = True
+                if industry_band not in industry_bands_to_exclude:
+                    industry_bands_to_exclude.append(industry_band)
+
+        if len(industry_bands_to_exclude) > 0:
+            print('The following industry_bands will be excluded:')
+            for industry_band_to_exlude in industry_bands_to_exclude:
+                print('\t', industry_band_to_exlude)
+
+            print('Re-writing {0} as {1} with these excluded'.format(
+                input_csv_fn,
+                input_csv_fn.replace('.csv', '_filtered.csv')
+            ))
+            with open(input_csv_fn, 'r') as inpf:
                 my_reader = csv.reader(inpf)
-                with open(os.path.join(out_path, 'merged_records_w_all_metrics_filtered.csv'), 'w') as outpf:
+                with open(input_csv_fn.replace('.csv', '_filtered.csv'), 'w') as outpf:
                     my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
                     for r in my_reader:
-                        industry_band = r[1]
-                        if industry_band not in count_of_empty_records_per_industry_band:
+                        industry_band = r[3]
+                        write_row = True
+                        if industry_band in industry_bands_to_exclude:
+                            write_row = False
+
+                        if write_row:
                             my_writer.writerow(r)
+        print('\n')
 
 
 def validate_filtered_metrics(out_path):
@@ -443,23 +457,17 @@ def validate_filtered_metrics(out_path):
 
 def transform_data(src_fn, out_path):
     # [1] first we dump out to csv each of the 4 sheets from the xlsx
-    convert_data(
+    convert_data_from_xlsx_to_csv(
         xlsx_fn=src_fn,
         out_path=out_path,
         limit_output_columns=True
     )
 
-    # [2] then we merge these 4 csv`s into a single csv
-    write_merged_csv(out_path)
-
-    # TODO think on NULL vs zero
-
-    # [3] then we filter this single csv to remove records where for industry_band a significant number of the
-    # waves are all null or zero
-    filter_empty_industry_bands(out_path)
-
-    # [4] then we validate metrics
-    validate_filtered_metrics(out_path)
+    # [2] then we re-write the csvs filtering off industry_band where there are waves containing completely null records
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/workforcestatus.csv', metric_count=3)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/tradingstatus.csv', metric_count=3)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/financialperformance.csv', metric_count=3)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/cashflow.csv', metric_count=1)
 
 
 if __name__ == "__main__":
