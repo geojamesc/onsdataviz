@@ -388,7 +388,7 @@ def rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn, metric_count):
             ))
             with open(input_csv_fn, 'r') as inpf:
                 my_reader = csv.reader(inpf)
-                with open(input_csv_fn.replace('.csv', '_filtered.csv'), 'w') as outpf:
+                with open(input_csv_fn.replace('.csv', '_filtered.csv'), 'w', newline='') as outpf:
                     my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
                     for r in my_reader:
                         industry_band = r[3]
@@ -464,14 +464,14 @@ def transform_data(src_fn, out_path):
     )
 
     # [2] then we re-write the csvs filtering off industry_band where there are waves containing completely null records
-    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/workforcestatus.csv', metric_count=3)
-    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/tradingstatus.csv', metric_count=3)
-    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/financialperformance.csv', metric_count=3)
-    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='/home/james/Desktop/cashflow.csv', metric_count=1)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='C:\\Users\\james\\Desktop\\workforcestatus.csv', metric_count=3)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='C:\\Users\\james\\Desktop\\tradingstatus.csv', metric_count=3)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='C:\\Users\\james\\Desktop\\financialperformance.csv', metric_count=3)
+    rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn='C:\\Users\\james\\Desktop\\cashflow.csv', metric_count=1)
 
 
 if __name__ == "__main__":
     transform_data(
-        src_fn='/home/james/Desktop/Work/FGreen/Supplied_Data_210521/basic data.xlsx',
-        out_path='/home/james/Desktop'
+        src_fn='C:\\Users\\james\\Desktop\\Work\\FGreen\\data\\basic data.xlsx',
+        out_path='C:\\Users\\james\\Desktop'
     )
