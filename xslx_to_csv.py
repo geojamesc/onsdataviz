@@ -336,21 +336,22 @@ def rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn, metric_count):
     waves_per_band = {}
 
     # Tableau is able to cope with more readable column names so rename the columns on output via the lookup
+    # these are essentially what FG provided in the original xlsx
     header_lookup = {
         'wave': 'Wave',
         'date': 'Date',
         'wave_start_date': 'Wave start date',
-        'industry_band': 'Industry or company size band',
-        'ws_on_furlough': 'On furlough',
-        'ws_working_normal_place_of_work': 'Working at normal place of work',
-        'ws_wfh': 'Working from home',
-        'ts_ceased_trading': 'Ceased Trading',
-        'ts_current_and_started_trading': 'Currently trading or started trading',
+        'industry_band': 'Industry / Band',
+        'ws_on_furlough': 'On furlough leave',
+        'ws_working_normal_place_of_work': 'Working at their normal place of work',
+        'ws_wfh': 'Working remotely instead of at their normal place of work',
+        'ts_ceased_trading': 'Has permanently ceased trading',
+        'ts_current_and_started_trading': 'Current and started trading',
         'ts_paused_trading': 'Paused trading',
         'fp_turnover_not_affected': 'Turnover has not been affected',
-        'fp_lower_turnover': 'Turnover is lower',
-        'fp_higher_turnover': 'Turnover is higher',
-        'cf_lt_3mths': 'Less than 3 months cashflow'
+        'fp_lower_turnover': 'Lower Turnover',
+        'fp_higher_turnover': 'Higher Turnover',
+        'cf_lt_3mths': '3 months or less Cashflow'
     }
 
     if os.path.exists(input_csv_fn):
