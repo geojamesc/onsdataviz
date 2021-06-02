@@ -335,6 +335,24 @@ def rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn, metric_count):
     """
     waves_per_band = {}
 
+    # Tableau is able to cope with more readable column names so rename the columns on output via the lookup
+    header_lookup = {
+        'wave': 'Wave',
+        'date': 'Date',
+        'wave_start_date': 'Wave start date',
+        'industry_band': 'Industry or company size band',
+        'ws_on_furlough': 'On furlough',
+        'ws_working_normal_place_of_work': 'Working at normal place of work',
+        'ws_wfh': 'Working from home',
+        'ts_ceased_trading': 'Ceased Trading',
+        'ts_current_and_started_trading': 'Currently trading or started trading',
+        'ts_paused_trading': 'Paused trading',
+        'fp_turnover_not_affected': 'Turnover has not been affected',
+        'fp_lower_turnover': 'Turnover is lower',
+        'fp_higher_turnover': 'Turnover is higher',
+        'cf_lt_3mths': 'Less than 3 months cashflow'
+    }
+
     if os.path.exists(input_csv_fn):
         with open(input_csv_fn, 'r') as inpf:
             my_reader = csv.DictReader(inpf)
@@ -386,18 +404,30 @@ def rewrite_csvs_w_empty_industry_bands_excluded(input_csv_fn, metric_count):
                 input_csv_fn,
                 input_csv_fn.replace('.csv', '_filtered.csv')
             ))
+            header = None
+            c = 1
             with open(input_csv_fn, 'r') as inpf:
                 my_reader = csv.reader(inpf)
                 with open(input_csv_fn.replace('.csv', '_filtered.csv'), 'w', newline='') as outpf:
                     my_writer = csv.writer(outpf, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
                     for r in my_reader:
-                        industry_band = r[3]
-                        write_row = True
-                        if industry_band in industry_bands_to_exclude:
-                            write_row = False
+                        if c == 1:
+                            # change the column names in the header using our lut
+                            header = r
+                            new_header = []
+                            for h in header:
+                                if h in header_lookup:
+                                    new_header.append(header_lookup[h])
+                            my_writer.writerow(new_header)
+                        else:
+                            industry_band = r[3]
+                            write_row = True
+                            if industry_band in industry_bands_to_exclude:
+                                write_row = False
 
-                        if write_row:
-                            my_writer.writerow(r)
+                            if write_row:
+                                my_writer.writerow(r)
+                        c += 1
         print('\n')
 
 
